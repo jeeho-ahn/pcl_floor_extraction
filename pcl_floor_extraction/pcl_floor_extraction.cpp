@@ -29,6 +29,7 @@ typedef Eigen::Vector3f EV3;
 typedef std::shared_ptr<EV3> EV3_ptr;
 
 const float dot_thres = 0.97;
+bool save_pcd = false;
 
 class segmented_set
 {
@@ -183,17 +184,10 @@ segmented_set segment_single_plane(pclCloud::Ptr cloud, double dist_thres)
     */
 }
 
-int main()
+std::pair<pclCloud::Ptr, EV3_ptr> extract_floor(pclCloud::Ptr cloud)
 {
-    //auto cloud = load_pcd_file<pclCloud>("rs_floor.ply");
-    auto cloud = load_pcd_file<pclCloud>("depth_img_test.pcd");
-    auto time_start_f = std::chrono::system_clock::now();
-    cloud = uniform_filter(cloud);
-    auto time_fin_f = std::chrono::system_clock::now();
-    std::cout << "Sampling Time Counted: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_fin_f - time_start_f).count() << std::endl;
-
     std::vector<segmented_set> segmented_list;
-    
+
     bool finished = false;
     pclCloud::Ptr pivot_cloud = cloud;
 
@@ -233,14 +227,15 @@ int main()
     if (segmented_list.size() == 0)
     {
         std::cout << "No Plane Found from the source cloud" << std::endl;
-        return -1;
+        return std::make_pair(nullptr,nullptr);
     }
     else
     {
         std::cout << "Planes Found: " << segmented_list.size() << std::endl;
         for (int n = 0; n < segmented_list.size(); n++)
         {
-            pcl::io::savePCDFile("plane" + std::to_string(n) + ".pcd", *segmented_list[n].inliers);
+            if(save_pcd)
+                pcl::io::savePCDFile("plane" + std::to_string(n) + ".pcd", *segmented_list[n].inliers);
             //std::cout << "Surface Normal: " << *(segmented_list[n].surf_normal()) << std::endl;
             float dot = ref_vec.dot(*(segmented_list[n].surf_normal()));
             std::cout << "dot: " << dot << std::endl;
@@ -251,12 +246,12 @@ int main()
         if (floor_angle_planes.size() == 0)
         {
             std::cout << "No Floor Plane Found from the source cloud" << std::endl;
-            return -1;
+            return std::make_pair(nullptr, nullptr);
         }
         else if (floor_angle_planes.size() == 1)
         {
             std::cout << "Unique Floor normal:\n" << *floor_angle_planes[0].surf_normal() << std::endl;
-            return 0;
+            return std::make_pair(floor_angle_planes[0].inliers,floor_angle_planes[0].surf_normal());
         }
         else //multiple planes with similar angles found
         {
@@ -269,9 +264,19 @@ int main()
             }
 
             std::cout << "Best Floor normal:\n" << *pivot.surf_normal() << std::endl;
-            return 0;
+            return std::make_pair(pivot.inliers, pivot.surf_normal());
         }
-        
-        return 0;
     }
+}
+
+int main()
+{
+    //auto cloud = load_pcd_file<pclCloud>("rs_floor.ply");
+    auto cloud = load_pcd_file<pclCloud>("depth_img_test.pcd");
+    auto time_start_f = std::chrono::system_clock::now();
+    cloud = uniform_filter(cloud);
+    auto time_fin_f = std::chrono::system_clock::now();
+    std::cout << "Sampling Time Counted: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_fin_f - time_start_f).count() << std::endl;
+
+    
 }
