@@ -1,3 +1,10 @@
+/*
+Extract and find floor plane with similar orientation to a given reference vector using RANSAC and get it's normal vector
+2021.3.2
+Written by Ahn, Jeeho
+MIT license
+*/
+
 #include <iostream>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
